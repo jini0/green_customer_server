@@ -112,6 +112,7 @@ app.post("/addCustomer", async (req, res)=>{
     // "쿼리" :insert into 테이블(컬럼1, 컬럼2, 컬럼3,....) values(?,?,?)
     // query("쿼리",[값1,값2,값3,값4,값5,값6], 함수)  --> 값들을 배열로 적을거!!!!!!  --> values의 값들을 ?로 해주면 여기 쿼리의 값에 ?가 담김 / 여기 "쿼리"에 위의 쿼리가 담기는거!
     //  ==> insert into customers_table(name, phone, birth, gender, add1, add2) values(?,?,?,?,?,?)
+    // 😶?????를 해주는 거는 쿼리문을 한줄에 다 안적으면 빨간줄이 생기는데 values(?,?,?,?,?,?) 이렇게 하고 밑에 []값들을 적어줘서 두 줄로 적게해주는거!!!  --> 보기편하게 하기위해서😶
     connection.query("insert into customers_table(name, phone, birth, gender, add1, add2) values(?,?,?,?,?,?)", 
         [c_name, c_phone, c_birth, c_gender, c_add, c_adddetail] ,
         (err, result, fields )=>{
@@ -179,11 +180,43 @@ app.delete('/delCustomer/:no', async (req, res) => {
         })    
 })
 
-// 💚수정하기
-// UPDATE 테이블이름 
-// SET 필드이름1=데이터값1, 필드이름2=데이터값2, ...
-// WHERE 필드이름=데이터값
-
+// 💚수정하기 - put전송방식
+// // - 내가 한거
+// // UPDATE 테이블이름 
+// // SET 필드이름1=데이터값1, 필드이름2=데이터값2, ...
+// // WHERE 필드이름=데이터값
+// // http://localhost:3001/updateCustomer/${no}
+// // 쿼리문 update문 : update customers_table set name='${c_name}',phone='${c_phone}',birth='${c_birth}',gender='${c_gender}',add1='${c_add}',add2='${c_adddetail}'
+// //                  where no = '${params.no}'
+// app.put('/updateCustomer/:no', async (req, res)=>{
+//     const params = req.params;
+//     const { c_name, c_phone, c_birth, c_gender, c_add, c_adddetail } = req.body;
+//     connection.query(
+//         `update customers_table set name='${c_name}',phone='${c_phone}',birth='${c_birth}',gender='${c_gender}',add1='${c_add}',add2='${c_adddetail}' where no='${params.no}'`,
+//         (err, rows,fields)=>{
+//             res.send(rows);
+//             console.log(err);
+//         })
+// })
+// - 선생님이랑   ✨update는 put으로 받음✨
+// workbench로 테이블이름, 컬럼명 잘 보고 작성해주기!
+// update 테이블이름 set 컬럼명 = 값 where no = 값
+// update customers_table set name='', phone='', birth='',gender='',add1='',add2='' where no =
+// http://localhost:3001/editcustomer/1 이라고 요청하면, 주소창의 1이라는 걸 전달하기 위한 것 -> 파라미터!!!!
+app.put('/editcustomer/:no', async (req, res)=>{
+    // 얘 자체가 no가 아니고 params 객체
+    // 파라미터 값을 가지고 있는 객체 : params
+    const params = req.params;
+    // params.no 하면 저 1에 접근할 수 있음
+    //put 요청을 할 때 이 값들을 다 가지고 올거임(body안에)  --> 구조분해할당으로 가져온거
+    const { c_name, c_phone, c_birth, c_gender, c_add, c_adddetail } = req.body;
+    connection.query(`update customers_table set name='${c_name}', phone='${c_phone}', birth='${c_birth}',gender='${c_gender}',add1='${c_add}',add2='${c_adddetail}' where no=${params.no}`,
+                                                                                                                                                                        //no는 숫자라서 '따옴표'
+    (err,result,fields)=>{
+        res.send(result);
+    })
+})
+//하고 나서 테스트하려고 postman으로 해보기!!!!(서버가 잘되었는지 포스트맨으로)
 
 
 
