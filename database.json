@@ -1,0 +1,7 @@
+{
+    "host":"customer-data.cdtmdsnqpirx.us-east-1.rds.amazonaws.com",              
+    "user":"admin",                                                               
+    "password":"rornfl3693",                                                      
+    "port":"3306",                                                              
+    "database":"customers"
+}
