@@ -8,6 +8,9 @@ const app = express();
 const port = 3001;
 const mysql = require("mysql");
 const fs = require("fs");           //파일을 읽어오도록 만들어주는 애
+// 💕8.3 - 2개 추가
+const bcrypt = require('bcrypt');   //비밀번호 암호화       //6. npm install bcrypt
+const saltRounds = 10;              //10번 암호화 할거다!(기회)
 
 const dbinfo = fs.readFileSync('./database.json');
 //받아온 json데이터를 객체형태로 변경 JSON.parse
@@ -218,6 +221,100 @@ app.put('/editcustomer/:no', async (req, res)=>{
 })
 //하고 나서 테스트하려고 postman으로 해보기!!!!(서버가 잘되었는지 포스트맨으로)
 
+
+// 💕8.3 회원가입 요청
+app.post("/join", async (req, res)=>{
+    let myPlanintextPass = req.body.userpass;       //body에 userpass라는 애가 있으면 담아줘!
+    let myPass = "";        //password를 green1234로 했음  -->  req.body.userpass가 담아둘거임  --> 얘를 암호화 할거임 --> 암호화한 애를 담아주기 위해 myPass 빈변수를 만들어줌
+    if(myPlanintextPass != '' && myPlanintextPass != undefined){
+        //빈 값과 undefined가 아닐때,
+        //1. 💗https://www.npmjs.com/package/bcrypt 에서 긁어오고 변수만 제대로 고쳐주기!!!!(Technique 1 (generate a salt and hash on separate function calls): 꺼 긁어와서)💗
+        bcrypt.genSalt(saltRounds, function(err, salt) {
+            bcrypt.hash(myPlanintextPass, salt, function(err, hash) {
+                // Store hash in your password DB.
+                myPass = hash;
+                console.log(myPass);
+
+                //2. 쿼리 작성
+                const {username, userphone, userorg, usermail} = req.body;
+                //connection.query(쿼리문, 쿼리문에 들어갈 값, 콜백함수)   -->쿼리문인자, 배열, 콜백함수                                      //regdate등록일만 바로 넣어줄거임  --> now()함수 사용하고 DATE_FORMAT을 이용해서 년/월/일만 나오게(시간은 빼고!):'%Y-%m-%d'
+                connection.query("insert into customer_members(username, userpass, userphone, userorg, usermail, regdate) values(?,?,?,?,?,DATE_FORMAT(now(),'%Y-%m-%d'))",
+                [username, myPass, userphone, userorg, usermail],
+                (err, result, fields) => {
+                    console.log(result)
+                    console.log(err)
+                    res.send("등록되었습니다.")
+                }
+                )
+            });
+        });
+    }
+})
+//1. 적고나서, postman 열어서 테스트해보기  --> POST    http://localhost:3001/join 주소 입력
+//Body - row에서 
+//{
+//     "userpass":"sky1"
+// }
+//이렇게 입력해줌 node index.js로 서버 돌려주고, 위의 값을 포스트맨에서 send 해주면
+//터미널에 $2b$10$odSk9w2XScqFf80JSBMgBuSidIPx6txsi7xdPlelYUMdMr4Y/Yo/2   이런식으로 뜬다  --> sky1이 암호화된거!
+//2. 적고나서, postman으로 테스트  (위에와 주소랑 Body-row는 같음)
+// {
+//     "username":"green",
+//     "userpass":"sky1",
+//     "userphone":"01012341234",
+//     "usermail":"abc@nacer.com",
+//     "userorg":"그린"
+// }            //등록일은 바로 지정해줘서 이렇게 5개만 배열에 들어갈 5개만 넣어주기
+//send보내면, 밑에 등록되었습니다. 가 뜨고 / mysql workbench에서 customer_members table에서 값들이 잘 추가입력된 걸 볼 수 있다!
+
+// 💕8.3 로그인 요청
+app.post('/login', async (req, res)=> {
+    // - 2개만 받아올거임 id인 usermail과 비밀번호인 userpass
+    // ✔usermail값에 일치하는 데이터가 있는지 select문 1234 -> #dfwew2rE 이런식으로 이상하게 암호화돼서
+    //   입력한 userpass를 암호화 해서 쿼리 결과의 패스워드와 일치하는지를 체크
+    // - 사용자가 회원가입시 1111로 비밀번호를 가입했는데 mysql에 값이 담길 때는 암호화되어서 $2b$10$wzNRbu9ndmQnw2CZ5H2HFuD.vMDLqnRAmrpE2sUo7SQFHPOf2TKn6 이런식으로 담기니까
+    //   사용자가 로그인시, 입력한 비밀번호인 1111을 다시 암호화하고 mysql에 담긴 암호화된 비밀번호와 두개가 일치하는지 비교하게 할거임!!!
+    const {usermail, userpass} = req.body;
+    connection.query(`select * from customer_members where usermail = '${usermail}'`,
+    (err, rows, fields)=>{
+        if(rows != undefined){      //결과가 있을 때
+            if(rows[0] == undefined){
+                // res.send(null)
+                res.send("실패")
+            }else {
+                //https://www.npmjs.com/package/bcrypt 에서 긁어오기 (To check a password: 여기서!!! 맨 위의 주석빼고 위에 두줄만 적어주기)
+                bcrypt.compare(userpass, rows[0].userpass, function(err, result) {
+                                        //rows[0].userpass : hash자리  --> 암호화한 비번
+                    // result == true
+                    if(result == true){
+                        res.send(rows[0])
+                    }else {
+                        // res.send(null)       //null받으면 체크해야하니까..?실패가 뜨게하자
+                        res.send("실패")
+                    }
+                });
+
+            }
+        }else {                     //결과가 없을 때
+            res.send(null)
+        }
+    })
+})
+// postman으로 테스트 POST - http://localhost/3001에서 Body - row에서,
+// customer_members 테이블에 가입한 애! 넣어주기 --> 나는 username이 '무미'인 아이디 메일과 비밀번호를 넣어주고 send하면
+// {
+//     "usermail":"mmm@naver.com",
+//     "userpass":"1111"
+// }
+//밑에 창에,
+// {
+//     "username": "무미",
+//     "userpass": "$2b$10$wzNRbu9ndmQnw2CZ5H2HFuD.vMDLqnRAmrpE2sUo7SQFHPOf2TKn6",          //비밀번호는 암호화되니까 비번 기억해두기! (1111)
+//     "userphone": "01012341234",
+//     "usermail": "mmm@naver.com",
+//     "regdate": "2022-08-03",
+//     "userorg": "서울"
+// }                        //이렇게 내가 회원가입했던 column과 값들이 뜰거임!
 
 
 // 🖤서버실행
