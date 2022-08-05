@@ -11,6 +11,9 @@ const fs = require("fs");           //파일을 읽어오도록 만들어주는 
 // 💕8.3 - 2개 추가
 const bcrypt = require('bcrypt');   //비밀번호 암호화       //6. npm install bcrypt
 const saltRounds = 10;              //10번 암호화 할거다!(기회)
+// 🧡8.5 이미지게시판🧡
+app.use(express.static("public"));
+const multer  = require('multer');
 
 const dbinfo = fs.readFileSync('./database.json');
 //받아온 json데이터를 객체형태로 변경 JSON.parse
@@ -40,6 +43,40 @@ const connection = mysql.createConnection({
 })
 app.use(express.json());
 app.use(cors());
+// 🧡8.5
+app.use("/upload", express.static("upload"));
+
+// 🧡8.5
+// 파일 요청시 파일이 저장될 경로와 파일이름(요청된 원본파일이름) 지정
+const storage = multer.diskStorage({
+    destination: "./upload/",
+    filename: function(req, file, cb){
+        cb(null, file.originalname);
+    }
+})
+
+// 업로드 객체
+const upload = multer({
+    storage: storage,
+    limits: { fieldSize: 1000000 }
+})
+
+// upload경로로 포스트 요청이 왔을 때 응답
+app.post("/upload", upload.single("img"), function(req, res, next){
+    res.send({
+        imageUrl: req.file.filename
+    });
+})
+//postman에 테스트 POST http://localhost:3001/upload 하고
+// Body - form-data 
+// 글자적는 란에, img  적고 text가 아니라   file로 변경  --> file선택란에서 아무 이미지 클릭해서 넣고 send하면,
+// 밑에창에
+// {
+//     "imageUrl": "img"                //req.file.filename --> filename이 나오는거임!  
+// }
+// 로 잘 들어가지고 server의 upload폴더에 이미지들이 잘 들어감 
+
+
 
 // app.get("경로", 함수)
 // connection.query("쿼리문", 함수)
@@ -315,6 +352,25 @@ app.post('/login', async (req, res)=> {
 //     "regdate": "2022-08-03",
 //     "userorg": "서울"
 // }                        //이렇게 내가 회원가입했던 column과 값들이 뜰거임!
+
+// 🧡8.5 
+// gallery 포스트 요청시 처리해줄 insert문
+app.post("/gallery", async (req, res) => {
+    const { usermail, title, imgurl, desc } = req.body;
+    connection.query("insert into customer_gallery(`title`,`imgurl`,`desc`,`usermail`) values(?,?,?,?)",
+    [title, imgurl, desc, usermail] ,
+    (err, result, fields)=>{
+        res.send("등록되었습니다.")
+        console.log(err);
+    })
+})
+// gallery 겟 요청시
+app.get("/gallery", async (req, res) => {
+    connection.query("select * from customer_gallery", 
+    (err, result, fields)=>{
+        res.send(result)        //결과를 넘겨줘!
+    })
+})
 
 
 // 🖤서버실행
