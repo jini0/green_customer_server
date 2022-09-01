@@ -12,11 +12,10 @@ const fs = require("fs");           //파일을 읽어오도록 만들어주는 
 const bcrypt = require('bcrypt');   //비밀번호 암호화       //6. npm install bcrypt
 const saltRounds = 10;              //10번 암호화 할거다!(기회)
 // 🧡8.5 이미지게시판🧡
-app.use(express.static("public"));
-const multer  = require('multer');
+app.use(express.static("public"));  //public이라는 폴더에 있는 파일에 접근 할 수 있도록 설정
+const multer  = require('multer');  //불러오기
 
-const dbinfo = fs.readFileSync('./database.json');
-//받아온 json데이터를 객체형태로 변경 JSON.parse
+const dbinfo = fs.readFileSync('./database.json'); //받아온 json데이터를 객체형태로 변경 JSON.parse(json데이터를 객체형태로 변경)
 const conf = JSON.parse(dbinfo);
 
 // 💛connection💛
@@ -41,8 +40,10 @@ const connection = mysql.createConnection({
     // port:"3306",                                                                //port번호
     // database:"customers"                                                        //workbench에서 local 말고, 새로 만든 customer라는 연결선?(connection name)에서 customers라는 schemes를 만듬!(데이터베이스이름)
 })
-app.use(express.json());
-app.use(cors());
+
+//use는 앱에 대한 설정
+app.use(express.json());    //json형식의 데이터를 처리할수 있도록 설정(json형식으로 정보를 전달하겠다.)
+app.use(cors());    //모든 브라우저에서 요청을 할 수 있게 해줌 / 브라우저의 CORS이슈를 막기 위해 사용하는 코드
 // 🧡8.5
 app.use("/upload", express.static("upload"));
 
